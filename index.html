@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Filament Color Swatches</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <main class="page">
+      <header class="hero">
+        <div>
+          <p class="eyebrow">Filament Palette</p>
+          <h1>Find the closest filament color</h1>
+          <p class="subtitle">
+            Browse filament swatches and compare a hex code to the closest match in the
+            catalog.
+          </p>
+        </div>
+        <form class="match-form" id="match-form">
+          <label for="hex-input">Enter a hex color</label>
+          <div class="input-row">
+            <input
+              id="hex-input"
+              name="hex-input"
+              type="text"
+              placeholder="#FF6B4A"
+              autocomplete="off"
+              required
+            />
+            <button type="submit">Find match</button>
+          </div>
+          <p class="helper">Use 3 or 6 digit hex values. Example: #ff6b4a</p>
+        </form>
+      </header>
+
+      <section class="match-result" id="match-result" aria-live="polite">
+        <div class="match-swatch" id="match-swatch"></div>
+        <div>
+          <p class="match-label">Closest match</p>
+          <h2 id="match-name">Start with a hex code</h2>
+          <p class="match-meta" id="match-meta"></p>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-header">
+          <h2>Filament library</h2>
+          <p id="swatch-count"></p>
+        </div>
+        <div class="swatch-grid" id="swatch-grid"></div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,50 @@
+[
+  {
+    "type": "PLA",
+    "brand": "Prusament",
+    "colorName": "Galaxy Black",
+    "hex": "#1f1f23"
+  },
+  {
+    "type": "PLA",
+    "brand": "Overture",
+    "colorName": "Matte White",
+    "hex": "#f2f2f2"
+  },
+  {
+    "type": "PETG",
+    "brand": "Polymaker",
+    "colorName": "Forest Green",
+    "hex": "#1f5e3b"
+  },
+  {
+    "type": "PETG",
+    "brand": "eSUN",
+    "colorName": "Clear Blue",
+    "hex": "#4f83ff"
+  },
+  {
+    "type": "ABS",
+    "brand": "Hatchbox",
+    "colorName": "Traffic Orange",
+    "hex": "#ff6b4a"
+  },
+  {
+    "type": "PLA+",
+    "brand": "Sunlu",
+    "colorName": "Desert Tan",
+    "hex": "#d2b48c"
+  },
+  {
+    "type": "TPU",
+    "brand": "SainSmart",
+    "colorName": "Electric Purple",
+    "hex": "#6d3ebf"
+  },
+  {
+    "type": "PLA Silk",
+    "brand": "Amolen",
+    "colorName": "Rose Gold",
+    "hex": "#d8a7a1"
+  }
+]
