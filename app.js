@@ -42,6 +42,87 @@ const colorDistance = (hexA, hexB) => {
   return Math.sqrt(dr * dr + dg * dg + db * db);
 };
 
+const rgbToHsl = ({ r, g, b }) => {
+  const normalizedR = r / 255;
+  const normalizedG = g / 255;
+  const normalizedB = b / 255;
+  const max = Math.max(normalizedR, normalizedG, normalizedB);
+  const min = Math.min(normalizedR, normalizedG, normalizedB);
+  const delta = max - min;
+
+  let hue = 0;
+  if (delta !== 0) {
+    if (max === normalizedR) {
+      hue = ((normalizedG - normalizedB) / delta) % 6;
+    } else if (max === normalizedG) {
+      hue = (normalizedB - normalizedR) / delta + 2;
+    } else {
+      hue = (normalizedR - normalizedG) / delta + 4;
+    }
+    hue = Math.round(hue * 60);
+    if (hue < 0) hue += 360;
+  }
+
+  const lightness = (max + min) / 2;
+  const saturation = delta === 0 ? 0 : delta / (1 - Math.abs(2 * lightness - 1));
+
+  return {
+    hue,
+    saturation,
+    lightness,
+  };
+};
+
+const describeColor = (hex) => {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return null;
+  const { hue, saturation, lightness } = rgbToHsl(rgb);
+
+  if (saturation < 0.08) {
+    if (lightness > 0.92) return 'white';
+    if (lightness < 0.12) return 'black';
+    return lightness > 0.6 ? 'light gray' : 'charcoal gray';
+  }
+
+  let base;
+  let shade;
+
+  if (hue >= 10 && hue < 35) {
+    base = 'orange';
+    shade = lightness < 0.4 ? 'burnt orange' : 'tangerine';
+  } else if (hue >= 35 && hue < 70) {
+    base = 'yellow';
+    shade = lightness < 0.45 ? 'golden yellow' : 'lemon yellow';
+  } else if (hue >= 70 && hue < 165) {
+    base = 'green';
+    if (lightness < 0.25) shade = 'midnight green';
+    else if (lightness < 0.4) shade = 'forest green';
+    else if (lightness > 0.75) shade = 'mint green';
+    else shade = 'spring green';
+  } else if (hue >= 165 && hue < 200) {
+    base = 'teal';
+    shade = lightness < 0.35 ? 'deep teal' : 'seafoam teal';
+  } else if (hue >= 200 && hue < 250) {
+    base = 'blue';
+    shade = lightness < 0.3 ? 'midnight blue' : 'sky blue';
+  } else if (hue >= 250 && hue < 295) {
+    base = 'purple';
+    shade = lightness < 0.35 ? 'deep purple' : 'lavender';
+  } else if (hue >= 295 && hue < 330) {
+    base = 'magenta';
+    shade = lightness < 0.35 ? 'berry magenta' : 'orchid';
+  } else {
+    base = 'red';
+    shade = lightness < 0.35 ? 'brick red' : 'crimson';
+  }
+
+  if (!shade || shade === base) {
+    return base;
+  }
+
+  return `${base} or ${shade}`;
+};
+
 const renderSwatches = (swatches) => {
   swatchGrid.innerHTML = '';
 
@@ -83,7 +164,9 @@ const updateMatchResult = (match, inputHex) => {
 
   matchSwatch.style.background = match.hex;
   matchName.textContent = match.colorName;
-  matchMeta.textContent = `${match.brand} · ${match.type} · ${match.hex.toUpperCase()} (input ${inputHex.toUpperCase()})`;
+  const description = describeColor(match.hex);
+  const descriptionText = description ? ` · ${description}` : '';
+  matchMeta.textContent = `${match.brand} · ${match.type}${descriptionText} · ${match.hex.toUpperCase()} (input ${inputHex.toUpperCase()})`;
 };
 
 const findClosestMatch = (hex) => {
