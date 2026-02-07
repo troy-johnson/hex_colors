@@ -5,9 +5,20 @@ const matchName = document.querySelector('#match-name');
 const matchMeta = document.querySelector('#match-meta');
 const matchSwatch = document.querySelector('#match-swatch');
 const hexInput = document.querySelector('#hex-input');
+const colorPicker = document.querySelector('#color-picker');
+const filterColor = document.querySelector('#filter-color');
+const filterType = document.querySelector('#filter-type');
+const filterBrand = document.querySelector('#filter-brand');
+const sortBy = document.querySelector('#sort-by');
 
 const state = {
   swatches: [],
+  filters: {
+    color: 'all',
+    type: 'all',
+    brand: 'all',
+    sort: 'color',
+  },
 };
 
 const normalizeHex = (value) => {
@@ -71,6 +82,39 @@ const rgbToHsl = ({ r, g, b }) => {
     saturation,
     lightness,
   };
+};
+
+const getColorFamily = (hex) => {
+  const rgb = hexToRgb(hex);
+  if (!rgb) return 'Unknown';
+  const { hue, saturation, lightness } = rgbToHsl(rgb);
+
+  if (saturation < 0.08) {
+    if (lightness > 0.92) return 'White';
+    if (lightness < 0.12) return 'Black';
+    return 'Gray';
+  }
+
+  if (hue >= 10 && hue < 35) return 'Orange';
+  if (hue >= 35 && hue < 70) return 'Yellow';
+  if (hue >= 70 && hue < 165) return 'Green';
+  if (hue >= 165 && hue < 200) return 'Teal';
+  if (hue >= 200 && hue < 250) return 'Blue';
+  if (hue >= 250 && hue < 295) return 'Purple';
+  if (hue >= 295 && hue < 330) return 'Magenta';
+  return 'Red';
+};
+
+const getHslInfo = (hex) => {
+  const rgb = hexToRgb(hex);
+  if (!rgb) {
+    return {
+      hue: 360,
+      saturation: 0,
+      lightness: 0,
+    };
+  }
+  return rgbToHsl(rgb);
 };
 
 const describeColor = (hex) => {
@@ -150,7 +194,7 @@ const renderSwatches = (swatches) => {
     swatchGrid.append(card);
   });
 
-  swatchCount.textContent = `${swatches.length} colors loaded`;
+  swatchCount.textContent = `${swatches.length} of ${state.swatches.length} colors shown`;
 };
 
 const updateMatchResult = (match, inputHex) => {
@@ -169,12 +213,12 @@ const updateMatchResult = (match, inputHex) => {
   matchMeta.textContent = `${match.brand} · ${match.type}${descriptionText} · ${match.hex.toUpperCase()} (input ${inputHex.toUpperCase()})`;
 };
 
-const findClosestMatch = (hex) => {
-  if (!state.swatches.length) return null;
+const findClosestMatch = (hex, swatches) => {
+  if (!swatches.length) return null;
   let best = null;
   let bestDistance = Number.POSITIVE_INFINITY;
 
-  state.swatches.forEach((swatch) => {
+  swatches.forEach((swatch) => {
     const distance = colorDistance(hex, swatch.hex);
     if (distance < bestDistance) {
       bestDistance = distance;
@@ -185,28 +229,151 @@ const findClosestMatch = (hex) => {
   return best;
 };
 
-matchForm.addEventListener('submit', (event) => {
-  event.preventDefault();
-  const normalized = normalizeHex(hexInput.value);
+const getFilteredSwatches = () => {
+  const { color, type, brand, sort } = state.filters;
+  const filtered = state.swatches.filter((swatch) => {
+    const colorMatch = color === 'all' || swatch.colorFamily === color;
+    const typeMatch = type === 'all' || swatch.type === type;
+    const brandMatch = brand === 'all' || swatch.brand === brand;
+    return colorMatch && typeMatch && brandMatch;
+  });
 
+  const sorted = [...filtered].sort((a, b) => {
+    if (sort === 'name') {
+      return a.colorName.localeCompare(b.colorName);
+    }
+    if (sort === 'brand') {
+      return a.brand.localeCompare(b.brand) || a.colorName.localeCompare(b.colorName);
+    }
+    if (sort === 'type') {
+      return a.type.localeCompare(b.type) || a.colorName.localeCompare(b.colorName);
+    }
+    return (
+      a.hue - b.hue ||
+      a.lightness - b.lightness ||
+      a.colorName.localeCompare(b.colorName)
+    );
+  });
+
+  return sorted;
+};
+
+const syncPickerToHex = (hex) => {
+  if (hex && colorPicker) {
+    colorPicker.value = hex;
+  }
+};
+
+const updateMatch = ({ showError }) => {
+  const normalized = normalizeHex(hexInput.value);
   if (!normalized) {
-    matchName.textContent = 'Enter a valid hex color';
-    matchMeta.textContent = 'Use 3 or 6 digit hex values like #ff6b4a.';
-    matchSwatch.style.background =
-      'repeating-linear-gradient(45deg, #fca5a5, #fca5a5 10px, #fecaca 10px, #fecaca 20px)';
+    if (showError) {
+      matchName.textContent = 'Enter a valid hex color';
+      matchMeta.textContent = 'Use 3 or 6 digit hex values like #ff6b4a.';
+      matchSwatch.style.background =
+        'repeating-linear-gradient(45deg, #fca5a5, #fca5a5 10px, #fecaca 10px, #fecaca 20px)';
+    }
     return;
   }
 
-  const match = findClosestMatch(normalized);
+  const match = findClosestMatch(normalized, getFilteredSwatches());
   updateMatchResult(match, normalized);
+  syncPickerToHex(normalized);
+};
+
+const refreshSwatches = () => {
+  const swatches = getFilteredSwatches();
+  renderSwatches(swatches);
+  updateMatch({ showError: false });
+};
+
+const setSelectOptions = (select, options, label) => {
+  select.innerHTML = '';
+  const allOption = document.createElement('option');
+  allOption.value = 'all';
+  allOption.textContent = `All ${label}`;
+  select.append(allOption);
+  options.forEach((optionValue) => {
+    const option = document.createElement('option');
+    option.value = optionValue;
+    option.textContent = optionValue;
+    select.append(option);
+  });
+};
+
+const populateFilters = (swatches) => {
+  const colors = new Set();
+  const types = new Set();
+  const brands = new Set();
+
+  swatches.forEach((swatch) => {
+    colors.add(swatch.colorFamily);
+    types.add(swatch.type);
+    brands.add(swatch.brand);
+  });
+
+  const sortedColors = Array.from(colors).sort((a, b) => a.localeCompare(b));
+  const sortedTypes = Array.from(types).sort((a, b) => a.localeCompare(b));
+  const sortedBrands = Array.from(brands).sort((a, b) => a.localeCompare(b));
+
+  setSelectOptions(filterColor, sortedColors, 'colors');
+  setSelectOptions(filterType, sortedTypes, 'types');
+  setSelectOptions(filterBrand, sortedBrands, 'brands');
+};
+
+matchForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  updateMatch({ showError: true });
+});
+
+colorPicker.addEventListener('input', (event) => {
+  hexInput.value = event.target.value.toUpperCase();
+  updateMatch({ showError: false });
+});
+
+hexInput.addEventListener('input', () => {
+  const normalized = normalizeHex(hexInput.value);
+  if (normalized) {
+    syncPickerToHex(normalized);
+  }
+});
+
+filterColor.addEventListener('change', (event) => {
+  state.filters.color = event.target.value;
+  refreshSwatches();
+});
+
+filterType.addEventListener('change', (event) => {
+  state.filters.type = event.target.value;
+  refreshSwatches();
+});
+
+filterBrand.addEventListener('change', (event) => {
+  state.filters.brand = event.target.value;
+  refreshSwatches();
+});
+
+sortBy.addEventListener('change', (event) => {
+  state.filters.sort = event.target.value;
+  refreshSwatches();
 });
 
 const init = async () => {
   try {
     const response = await fetch('data.json');
     const data = await response.json();
-    state.swatches = data;
-    renderSwatches(data);
+    state.swatches = data.map((swatch) => {
+      const hsl = getHslInfo(swatch.hex);
+      return {
+        ...swatch,
+        colorFamily: getColorFamily(swatch.hex),
+        hue: hsl.saturation < 0.08 ? 360 : hsl.hue,
+        lightness: hsl.lightness,
+      };
+    });
+    populateFilters(state.swatches);
+    refreshSwatches();
+    updateMatch({ showError: false });
   } catch (error) {
     swatchGrid.innerHTML =
       '<p class="swatch-meta">Unable to load swatches. Check data.json.</p>';
