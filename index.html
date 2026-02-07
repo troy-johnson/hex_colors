@@ -28,9 +28,18 @@
               autocomplete="off"
               required
             />
+            <input
+              id="color-picker"
+              name="color-picker"
+              type="color"
+              value="#ff6b4a"
+              aria-label="Pick a color"
+            />
             <button type="submit">Find match</button>
           </div>
-          <p class="helper">Use 3 or 6 digit hex values. Example: #ff6b4a</p>
+          <p class="helper">
+            Use 3 or 6 digit hex values, or choose a swatch from the picker.
+          </p>
         </form>
       </header>
 
@@ -47,6 +56,29 @@
         <div class="section-header">
           <h2>Filament library</h2>
           <p id="swatch-count"></p>
+        </div>
+        <div class="filters">
+          <div class="filter-field">
+            <label for="filter-color">Color</label>
+            <select id="filter-color" name="filter-color"></select>
+          </div>
+          <div class="filter-field">
+            <label for="filter-type">Filament type</label>
+            <select id="filter-type" name="filter-type"></select>
+          </div>
+          <div class="filter-field">
+            <label for="filter-brand">Brand</label>
+            <select id="filter-brand" name="filter-brand"></select>
+          </div>
+          <div class="filter-field">
+            <label for="sort-by">Sort by</label>
+            <select id="sort-by" name="sort-by">
+              <option value="color">Color (hue)</option>
+              <option value="name">Color name</option>
+              <option value="brand">Brand</option>
+              <option value="type">Filament type</option>
+            </select>
+          </div>
         </div>
         <div class="swatch-grid" id="swatch-grid"></div>
       </section>

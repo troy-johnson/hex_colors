@@ -79,6 +79,16 @@ input[type="text"] {
   font-size: 1rem;
 }
 
+input[type="color"] {
+  width: 52px;
+  height: 46px;
+  border-radius: 12px;
+  border: 1px solid #d1d5db;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+}
+
 button {
   border: none;
   background: #111827;
@@ -150,6 +160,33 @@ button:hover {
   color: #6b7280;
 }
 
+.filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.filter-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.filter-field label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.filter-field select {
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  font-size: 0.95rem;
+}
+
 .swatch-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -198,6 +235,10 @@ button:hover {
 
   .input-row {
     flex-direction: column;
+  }
+
+  input[type="color"] {
+    width: 100%;
   }
 
   button {
