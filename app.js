@@ -167,47 +167,21 @@ const describeColor = (hex) => {
   return `${base} or ${shade}`;
 };
 
-const flattenSwatchData = (data) => {
-  if (!Array.isArray(data)) return [];
-
-  const first = data[0];
-  if (first && Array.isArray(first.brands)) {
-    return data.flatMap((swatch) => {
-      const normalizedHex = normalizeHex(swatch.hex);
-      if (!normalizedHex || !swatch.type || !Array.isArray(swatch.brands)) return [];
-      return swatch.brands
-        .filter((entry) => entry && entry.brand && entry.colorName)
-        .map((entry) => ({
-          type: swatch.type,
-          brand: entry.brand,
-          colorName: entry.colorName,
-          hex: normalizedHex,
-        }));
-    });
-  }
-
-  return data
-    .map((swatch) => ({
-      type: swatch.type,
-      brand: swatch.brand,
-      colorName: swatch.colorName,
-      hex: normalizeHex(swatch.hex),
-    }))
-    .filter((swatch) => swatch.type && swatch.brand && swatch.colorName && swatch.hex);
-};
-
-const groupByHex = (flatSwatches) => {
+const groupFlatSwatches = (swatches) => {
   const grouped = new Map();
 
-  flatSwatches.forEach((swatch) => {
-    if (!grouped.has(swatch.hex)) {
-      grouped.set(swatch.hex, {
-        hex: swatch.hex,
-        entries: [],
+  swatches.forEach((swatch) => {
+    const normalizedHex = normalizeHex(swatch.hex);
+    if (!normalizedHex) return;
+    const key = `${swatch.type}::${normalizedHex}`;
+    if (!grouped.has(key)) {
+      grouped.set(key, {
+        type: swatch.type,
+        hex: normalizedHex,
+        brands: [],
       });
     }
-    grouped.get(swatch.hex).entries.push({
-      type: swatch.type,
+    grouped.get(key).brands.push({
       brand: swatch.brand,
       colorName: swatch.colorName,
     });
@@ -216,12 +190,24 @@ const groupByHex = (flatSwatches) => {
   return Array.from(grouped.values());
 };
 
-const formatVariant = (entry) => {
-  const base = `${entry.type} · ${entry.brand}`;
-  if (!entry.colorName || entry.colorName.toLowerCase() === entry.brand.toLowerCase()) {
-    return base;
+const normalizeSwatchData = (data) => {
+  if (!Array.isArray(data)) return [];
+  const first = data[0];
+  if (first && Array.isArray(first.brands)) {
+    return data
+      .map((swatch) => ({
+        type: swatch.type,
+        hex: normalizeHex(swatch.hex),
+        brands: Array.isArray(swatch.brands)
+          ? swatch.brands
+              .filter((entry) => entry && entry.brand && entry.colorName)
+              .map((entry) => ({ brand: entry.brand, colorName: entry.colorName }))
+          : [],
+      }))
+      .filter((swatch) => swatch.hex && swatch.type && swatch.brands.length);
   }
-  return `${base} (${entry.colorName})`;
+
+  return groupFlatSwatches(data);
 };
 
 const renderSwatches = (swatches) => {
@@ -241,13 +227,17 @@ const renderSwatches = (swatches) => {
 
     const meta = document.createElement('p');
     meta.className = 'swatch-meta';
-    meta.textContent = swatch.variantDisplay;
+    meta.textContent = `${swatch.type} · ${swatch.brandNames.join(', ')}`;
 
     const hex = document.createElement('p');
     hex.className = 'swatch-hex';
     hex.textContent = swatch.hex.toUpperCase();
 
-    card.append(preview, name, meta, hex);
+    const aliases = document.createElement('p');
+    aliases.className = 'swatch-meta';
+    aliases.textContent = swatch.brandDisplay;
+
+    card.append(preview, name, meta, hex, aliases);
     swatchGrid.append(card);
   });
 
@@ -267,7 +257,7 @@ const updateMatchResult = (match, inputHex) => {
   matchName.textContent = match.primaryColorName;
   const description = describeColor(match.hex);
   const descriptionText = description ? ` · ${description}` : '';
-  matchMeta.textContent = `${match.variantDisplay}${descriptionText} · ${match.hex.toUpperCase()} (input ${inputHex.toUpperCase()})`;
+  matchMeta.textContent = `${match.type} · ${match.brandDisplay}${descriptionText} · ${match.hex.toUpperCase()} (input ${inputHex.toUpperCase()})`;
 };
 
 const findClosestMatch = (hex, swatches) => {
@@ -290,7 +280,7 @@ const getFilteredSwatches = () => {
   const { color, type, brand, sort } = state.filters;
   const filtered = state.swatches.filter((swatch) => {
     const colorMatch = color === 'all' || swatch.colorFamily === color;
-    const typeMatch = type === 'all' || swatch.typeNames.includes(type);
+    const typeMatch = type === 'all' || swatch.type === type;
     const brandMatch = brand === 'all' || swatch.brandNames.includes(brand);
     return colorMatch && typeMatch && brandMatch;
   });
@@ -303,7 +293,7 @@ const getFilteredSwatches = () => {
       return a.brandSort.localeCompare(b.brandSort) || a.primaryColorName.localeCompare(b.primaryColorName);
     }
     if (sort === 'type') {
-      return a.typeSort.localeCompare(b.typeSort) || a.primaryColorName.localeCompare(b.primaryColorName);
+      return a.type.localeCompare(b.type) || a.primaryColorName.localeCompare(b.primaryColorName);
     }
     return a.hue - b.hue || a.lightness - b.lightness || a.primaryColorName.localeCompare(b.primaryColorName);
   });
@@ -361,7 +351,7 @@ const populateFilters = (swatches) => {
 
   swatches.forEach((swatch) => {
     colors.add(swatch.colorFamily);
-    swatch.typeNames.forEach((typeName) => types.add(typeName));
+    types.add(swatch.type);
     swatch.brandNames.forEach((brandName) => brands.add(brandName));
   });
 
@@ -415,31 +405,20 @@ const init = async () => {
   try {
     const response = await fetch('data.json');
     const data = await response.json();
-    const groupedData = groupByHex(flattenSwatchData(data));
+    const groupedData = normalizeSwatchData(data);
 
     state.swatches = groupedData.map((swatch) => {
       const hsl = getHslInfo(swatch.hex);
-      const sortedEntries = [...swatch.entries].sort((a, b) => {
-        return (
-          a.type.localeCompare(b.type) ||
-          a.brand.localeCompare(b.brand) ||
-          a.colorName.localeCompare(b.colorName)
-        );
-      });
-
-      const typeNames = Array.from(new Set(sortedEntries.map((entry) => entry.type)));
-      const brandNames = Array.from(new Set(sortedEntries.map((entry) => entry.brand)));
-      const primaryEntry = sortedEntries[0];
+      const sortedBrands = [...swatch.brands].sort((a, b) => a.brand.localeCompare(b.brand));
+      const primary = sortedBrands[0];
 
       return {
         ...swatch,
-        entries: sortedEntries,
-        primaryColorName: primaryEntry.colorName,
-        variantDisplay: sortedEntries.map(formatVariant).join(', '),
-        typeNames,
-        brandNames,
-        typeSort: typeNames[0],
-        brandSort: brandNames[0],
+        brands: sortedBrands,
+        primaryColorName: primary.colorName,
+        brandNames: sortedBrands.map((entry) => entry.brand),
+        brandDisplay: sortedBrands.map((entry) => `${entry.brand} (${entry.colorName})`).join(', '),
+        brandSort: sortedBrands[0].brand,
         colorFamily: getColorFamily(swatch.hex),
         hue: hsl.saturation < 0.08 ? 360 : hsl.hue,
         lightness: hsl.lightness,
