@@ -203,6 +203,15 @@ button:hover {
   gap: 12px;
 }
 
+.swatch-card--expandable {
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+
+.swatch-card--expandable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.14);
+}
+
 .swatch-preview {
   height: 120px;
   border-radius: 16px;
@@ -226,6 +235,21 @@ button:hover {
   font-size: 0.95rem;
   color: #111827;
 }
+
+.swatch-expand {
+  justify-self: start;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid #d1d5db;
+  background: #f9fafb;
+  color: #374151;
+  font-size: 0.8rem;
+}
+
+.swatch-expand:hover {
+  background: #f3f4f6;
+}
+
 
 @media (max-width: 720px) {
   .hero {
